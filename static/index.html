@@ -1,0 +1,1120 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ziyaretçi Yönetimi</title>
+
+  <style>
+    :root{
+      --accent:#1cc6bd;
+      --muted:#6b7280;
+      --bg:#f8fafc;
+      --card:#ffffff;
+      --danger:#dc2626;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:#111827;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:100vh;
+      padding:24px;
+    }
+
+    .container{
+      width:100%;
+      max-width:920px;
+      background:var(--card);
+      border-radius:12px;
+      box-shadow:0 10px 30px rgba(2,6,23,0.08);
+      padding:24px;
+    }
+
+    header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:18px;
+    }
+    header h1{ margin:0; font-size:1.25rem; }
+    .muted{ color:var(--muted); font-size:0.95rem; }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 280px 1fr;
+      gap:18px;
+    }
+
+    .panel{
+      background:linear-gradient(180deg, #ffffff, #fbfdff);
+      border:1px solid #e6eefc;
+      padding:16px;
+      border-radius:14px;
+    }
+    .btn{
+      display:block;
+      width:100%;
+      padding:10px 12px;
+      margin-bottom:10px;
+      border-radius:8px;
+      border:0;
+      background:var(--accent);
+      color:white;
+      font-weight:600;
+      cursor:pointer;
+    }
+    .btn.outline{
+      background:transparent;
+      border:1px solid #dbeafe;
+      color:var(--accent);
+      font-weight:600;
+    }
+    .chip-btn{
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid #fecdd3;
+      background:#fee2e2;
+      color:#b91c1c;
+      font-weight:600;
+      cursor:pointer;
+      white-space:nowrap;
+    }
+
+    .content-card{
+      background:linear-gradient(180deg,#fff,#fbfdff);
+      border:1px solid #eef2ff;
+      padding:16px;
+      border-radius:10px;
+    }
+    form .row{ display:flex; gap:8px; margin-bottom:10px; align-items:center;}
+    label{ width:120px; font-size:0.95rem; color:var(--muted); }
+    input[type="text"], input[type="datetime-local"]{
+      flex:1;
+      padding:8px 10px;
+      border-radius:6px;
+      border:1px solid #e6eefc;
+      font-size:0.95rem;
+    }
+    textarea{
+      flex:1;
+      padding:8px 10px;
+      border-radius:6px;
+      border:1px solid #e6eefc;
+      font-size:0.95rem;
+      resize: vertical;
+      min-height:64px;
+    }
+    .camera-box{
+      border:1px dashed #d1d5db;
+      border-radius:8px;
+      padding:10px;
+      background:#0a3763;
+    }
+    video.preview{
+      width:100%;
+      max-height:200px;
+      background:#000;
+      border-radius:8px;
+    }
+    .photo-preview{
+      margin-top:8px;
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    .photo-preview img{
+      max-width:110px;
+      aspect-ratio: 3 / 4;
+      object-fit: cover;
+      border-radius:8px;
+      border:1px solid #e5e7eb;
+    }
+    .print-card{
+      margin-top:12px;
+      border:1px solid #e5e7eb;
+      border-radius:10px;
+      padding:12px;
+      display:grid;
+      grid-template-columns: 120px 1fr;
+      grid-template-rows: auto auto;
+      gap:10px;
+      align-items:start;
+      background:#fff;
+      width:340px;
+    }
+    .print-card .photo{
+      width:80px;
+      height:106px;
+      border:1px solid #d1d5db;
+      border-radius:8px;
+      object-fit:cover;
+      background:#f9fafb;
+      grid-column:1;
+      grid-row:1;
+      justify-self:center;
+    }
+    .print-card .info{
+      grid-column:2;
+      grid-row:1 / 3;
+      font-size:1.08rem;
+      line-height:1.45rem;
+      text-align:left;
+    }
+    .print-card .qr-box{
+      width:48px;
+      height:48px;
+      border:1px dashed #d1d5db;
+      border-radius:8px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#f9fafb;
+      grid-column:1;
+      grid-row:2;
+      justify-self:center;
+    }
+    .print-actions{ margin-top:8px; }
+    .filter-bar{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      margin-bottom:12px;
+      flex-wrap:wrap;
+    }
+    .chip-toggle{
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid #dbeafe;
+      background:#fff;
+      color:#1d4ed8;
+      cursor:pointer;
+      font-weight:600;
+    }
+    .chip-toggle.active{
+      background:#2563eb;
+      color:#fff;
+      border-color:#2563eb;
+    }
+    .search-input{
+      flex:1;
+      min-width:200px;
+      padding:8px 10px;
+      border-radius:8px;
+      border:1px solid #e5e7eb;
+      font-size:0.95rem;
+    }
+    .thumb{
+      width:70px;
+      height:90px;
+      border-radius:8px;
+      border:1px solid #e5e7eb;
+      object-fit:cover;
+    }
+    .actions{ display:flex; gap:8px; margin-top:14px; }
+    .small{ font-size:0.9rem; color:var(--muted); }
+
+    ul.list { list-style:none; padding:0; margin:0; }
+    ul.list li{
+      padding:10px;
+      border-bottom:1px dashed #eef2ff;
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      align-items:center;
+    }
+
+    .report{ font-size:0.95rem; margin-bottom:8px; }
+    .report-card{
+      border:1px solid #e5e7eb;
+      border-radius:8px;
+      padding:10px;
+      margin-bottom:8px;
+      background:#f9fafb;
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:center;
+    }
+    .badge{
+      padding:4px 8px;
+      border-radius:999px;
+      font-size:0.8rem;
+      font-weight:700;
+      color:#111827;
+      background:#d1fae5;
+      border:1px solid #bbf7d0;
+      white-space:nowrap;
+    }
+    .badge.off{
+      background:#fee2e2;
+      border-color:#fecdd3;
+      color:#991b1b;
+    }
+
+    .modal{
+      position:fixed;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:rgba(2,6,23,0.45);
+      visibility:hidden;
+      opacity:0;
+      transition:all .18s ease;
+    }
+    .modal.open{ visibility:visible; opacity:1; }
+    .modal-card{
+      width:100%;
+      max-width:480px;
+      background:var(--card);
+      padding:18px;
+      border-radius:12px;
+      box-shadow:0 10px 30px rgba(2,6,23,0.18);
+    }
+
+    .note{ color:var(--muted); font-size:0.9rem; margin-top:8px; }
+
+    @media (max-width:800px){
+      .grid{ grid-template-columns: 1fr; }
+      label{ width:110px; }
+    }
+  </style>
+</head>
+<script src="/static/qrcode.min.js"></script>
+<body>
+  <div class="container" role="main">
+    <header>
+      <div>
+        <h1>Ziyaretçi Kayıt Paneli</h1>
+      </div>
+      <div class="small"><span id="serverStatus">bilinmiyor</span></div>
+    </header>
+
+    <div class="grid">
+      <aside class="panel" aria-label="menü">
+        <button class="btn" id="btnNew">Yeni Ziyaretçi</button>
+        <button class="btn outline" id="btnActive">Aktif Ziyaretçiler</button>
+        <button class="btn outline" id="btnReports">Ziyaretçi Raporları</button>
+        <button class="btn outline" id="btnDeleted">Silinen Kayıtlar</button>
+      </aside>
+
+      <section class="content-card" id="mainContent">
+        <div id="homeScreen">
+          <h3>Ana Menü</h3>
+          <p class="small">Yeni ziyaretçi eklemek, aktif ziyaretçileri görmek veya raporları incelemek için soldaki düğmeleri kullan.</p>
+        </div>
+
+        <div id="formScreen" style="display:none;">
+          <h3>Yeni Ziyaretçi Kaydı</h3>
+          <form id="visitorForm">
+            <div class="row">
+              <label for="firstName">Ad</label>
+              <input id="firstName" name="firstName" type="text" placeholder="Ad" required />
+            </div>
+            <div class="row">
+              <label for="lastName">Soyad</label>
+              <input id="lastName" name="lastName" type="text" placeholder="Soyad" required />
+            </div>
+            <div class="row">
+              <label for="entry">Giriş Saati</label>
+
+              <input id="entry" name="entry" type="datetime-local" required />
+            </div>
+            <div class="row">
+              <label for="meet">Geliş Sebebi</label>
+              <textarea id="meet" name="meet" placeholder="Ziyaret sebebi" required></textarea>
+            </div>
+            <div class="row">
+              <label for="host">Görüşeceği Kişi</label>
+              <input id="host" name="host" type="text" placeholder="Kişi Adı" required />
+            </div>
+            <div class="row">
+              <label>Fotoğraf</label>
+              <div class="camera-box" style="flex:1;">
+                <div class="actions" style="margin-top:0; gap:6px;">
+                  <button type="button" class="btn outline" id="btnCamera">Kamerayı Aç</button>
+                  <button type="button" class="btn" id="btnCapture">Fotoğraf Çek</button>
+                </div>
+                <video id="cameraPreview" class="preview" playsinline muted></video>
+                <div class="photo-preview" id="photoPreview" style="display:none;">
+                  <img id="photoImg" alt="Fotoğraf önizleme" />
+                  <button type="button" class="btn outline" id="btnClearPhoto" style="max-width:160px;">Temizle</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button type="submit" class="btn">Kaydet</button>
+              <button type="button" class="btn outline" id="cancelForm">İptal</button>
+            </div>
+
+            <div id="formMsg" class="note" role="status" aria-live="polite"></div>
+          </form>
+        <div id="cardContainer" style="display:none; margin-top:10px;">
+          <div class="print-card" id="printCard">
+            <img id="cardPhoto" class="photo" alt="Fotoğraf">
+            <div class="info" id="cardInfo"></div>
+            <div class="qr-box" id="cardQR"></div>
+          </div>
+          <div class="print-actions">
+            <button type="button" class="btn outline" id="btnPrintCard">Kartı Yazdır</button>
+          </div>
+        </div>
+        </div>
+
+        <div id="activeScreen" style="display:none;">
+          <h3>Aktif Ziyaretçiler</h3>
+          <ul class="list" id="activeList">
+          </ul>
+          <div id="activeMsg" class="note"></div>
+        </div>
+
+        <div id="reportScreen" style="display:none;">
+          <h3>Ziyaretçi Raporları</h3>
+          <div class="filter-bar">
+            <div style="display:flex; gap:6px;">
+              <button type="button" class="chip-toggle active" data-scope="all" id="scopeAll">Hepsi</button>
+              <button type="button" class="chip-toggle" data-scope="year" id="scopeYear">Yıllık</button>
+            </div>
+            <input type="search" id="reportSearch" class="search-input" placeholder="Ada, sebebe, kişiye göre ara..." />
+          </div>
+          <div id="monthBar" class="filter-bar" style="display:none;">
+            <div style="display:flex; flex-wrap:wrap; gap:6px;">
+              <button type="button" class="chip-toggle" data-month="1">Ocak</button>
+              <button type="button" class="chip-toggle" data-month="2">Şubat</button>
+              <button type="button" class="chip-toggle" data-month="3">Mart</button>
+              <button type="button" class="chip-toggle" data-month="4">Nisan</button>
+              <button type="button" class="chip-toggle" data-month="5">Mayıs</button>
+              <button type="button" class="chip-toggle" data-month="6">Haziran</button>
+              <button type="button" class="chip-toggle" data-month="7">Temmuz</button>
+              <button type="button" class="chip-toggle" data-month="8">Ağustos</button>
+              <button type="button" class="chip-toggle" data-month="9">Eylül</button>
+              <button type="button" class="chip-toggle" data-month="10">Ekim</button>
+              <button type="button" class="chip-toggle" data-month="11">Kasım</button>
+              <button type="button" class="chip-toggle" data-month="12">Aralık</button>
+            </div>
+          </div>
+          <div id="reportsArea">
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="modal" id="editModal">
+    <div class="modal-card">
+      <h4 style="margin-top:0;">Kayıt Düzenle</h4>
+      <form id="editForm">
+        <div class="row">
+          <label for="editFirst">Ad</label>
+          <input id="editFirst" type="text" placeholder="Ad" required />
+        </div>
+        <div class="row">
+          <label for="editLast">Soyad</label>
+          <input id="editLast" type="text" placeholder="Soyad" required />
+        </div>
+        <div class="row">
+          <label for="editEntry">Giriş</label>
+          <input id="editEntry" type="text" placeholder="GG.AA.YYYY SS:DD" required />
+        </div>
+        <div class="row">
+          <label for="editMeet">Sebep</label>
+          <input id="editMeet" type="text" placeholder="Geliş sebebi" required />
+        </div>
+        <div class="row">
+          <label for="editHost">Görüşeceği</label>
+          <input id="editHost" type="text" placeholder="Görüşeceği kişi" required />
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn">Kaydet</button>
+          <button type="button" class="btn outline" id="cancelEdit">İptal</button>
+        </div>
+        <div id="editMsg" class="note"></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="modal" class="modal" role="dialog" aria-hidden="true">
+    <div class="modal-card" role="document">
+      <h3 id="modalTitle">Başlık</h3>
+      <div id="modalBody"></div>
+      <div style="text-align:right; margin-top:12px;">
+        <button class="btn outline" id="modalClose">Kapat</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+    const btnNew = document.getElementById('btnNew');
+    const btnActive = document.getElementById('btnActive');
+    const btnReports = document.getElementById('btnReports');
+    const btnDeleted = document.getElementById('btnDeleted');
+    const main = document.getElementById('mainContent');
+
+    const homeScreen = document.getElementById('homeScreen');
+    const formScreen = document.getElementById('formScreen');
+    const activeScreen = document.getElementById('activeScreen');
+    const reportScreen = document.getElementById('reportScreen');
+
+    const visitorForm = document.getElementById('visitorForm');
+    const formMsg = document.getElementById('formMsg');
+    const activeList = document.getElementById('activeList');
+    const activeMsg = document.getElementById('activeMsg');
+    const reportsArea = document.getElementById('reportsArea');
+    const reportSearch = document.getElementById('reportSearch');
+    const scopeButtons = {
+      all: document.getElementById('scopeAll'),
+      year: document.getElementById('scopeYear')
+    };
+    const monthButtons = Array.from(document.querySelectorAll('[data-month]'));
+    const monthBar = document.getElementById('monthBar');
+    const cardContainer = document.getElementById('cardContainer');
+    const cardPhoto = document.getElementById('cardPhoto');
+    const cardInfo = document.getElementById('cardInfo');
+    const cardQR = document.getElementById('cardQR');
+    const btnPrintCard = document.getElementById('btnPrintCard');
+    const editModal = document.getElementById('editModal');
+    const editForm = document.getElementById('editForm');
+    const editMsg = document.getElementById('editMsg');
+    const editFirst = document.getElementById('editFirst');
+    const editLast = document.getElementById('editLast');
+    const editEntry = document.getElementById('editEntry');
+    const editMeet = document.getElementById('editMeet');
+    const editHost = document.getElementById('editHost');
+    const cancelEdit = document.getElementById('cancelEdit');
+    let reportScope = 'all';
+    let reportSearchTerm = '';
+    let searchTimer = null;
+    let selectedMonth = null;
+    let selectedYear = new Date().getFullYear();
+    let showDeleted = false;
+    let lastCardData = null;
+    let editingVisitorId = null;
+
+    const serverStatus = document.getElementById('serverStatus');
+
+    // Modal
+    const modal = document.getElementById('modal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+    const modalClose = document.getElementById('modalClose');
+    modalClose.addEventListener('click', closeModal);
+
+    // Camera elements
+    const btnCamera = document.getElementById('btnCamera');
+    const btnCapture = document.getElementById('btnCapture');
+    const btnClearPhoto = document.getElementById('btnClearPhoto');
+    const cameraPreview = document.getElementById('cameraPreview');
+    const photoPreview = document.getElementById('photoPreview');
+    const photoImg = document.getElementById('photoImg');
+    let mediaStream = null;
+    let capturedPhotoDataUrl = '';
+
+    function openModal(title, html){
+      modalTitle.textContent = title;
+      modalBody.innerHTML = html;
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden','false');
+    }
+    function closeModal(){
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden','true');
+    }
+
+    function setActiveButton(activeBtn){
+      [btnNew, btnActive, btnReports].forEach(btn => {
+        if (btn === activeBtn){
+          btn.classList.remove('outline');
+        } else {
+          btn.classList.add('outline');
+        }
+      });
+    }
+
+    async function startCamera(){
+      try{
+        mediaStream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 480 }, height: { ideal: 640 }, aspectRatio: { ideal: 3/4 } }});
+        cameraPreview.srcObject = mediaStream;
+        await cameraPreview.play();
+      } catch(err){
+        formMsg.textContent = 'Kamera açılamadı: ' + err.message;
+      }
+    }
+
+    function stopCamera(){
+      if (mediaStream){
+        mediaStream.getTracks().forEach(t => t.stop());
+        mediaStream = null;
+      }
+      cameraPreview.pause();
+      cameraPreview.srcObject = null;
+    }
+
+    function capturePhoto(){
+      if (!cameraPreview.videoWidth){
+        formMsg.textContent = 'Kamera hazır değil.';
+        return;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = 360;
+      canvas.height = 480;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(cameraPreview, 0, 0, canvas.width, canvas.height);
+      capturedPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      photoImg.src = capturedPhotoDataUrl;
+      photoPreview.style.display = 'flex';
+      stopCamera();
+      cameraPreview.style.display = 'none';
+      btnCapture.disabled = true;
+      btnCamera.disabled = true;
+    }
+
+    function clearPhoto(){
+      capturedPhotoDataUrl = '';
+      photoImg.src = '';
+      photoPreview.style.display = 'none';
+      cameraPreview.style.display = 'block';
+      btnCapture.disabled = false;
+      btnCamera.disabled = false;
+    }
+
+    function formatDate(val){
+      if (!val) return '';
+      const d = new Date(val);
+      if (isNaN(d.getTime())) return escapeHtml(val);
+      const pad = (n)=> String(n).padStart(2,'0');
+      const y = d.getFullYear();
+      const m = pad(d.getMonth()+1);
+      const day = pad(d.getDate());
+      const hh = pad(d.getHours());
+      const mm = pad(d.getMinutes());
+      return `${day}.${m}.${y} ${hh}:${mm}`;
+    }
+    function show(screen){
+      [homeScreen, formScreen, activeScreen, reportScreen].forEach(s => s.style.display = 'none');
+      screen.style.display = '';
+    }
+
+    btnNew.addEventListener('click', () => {
+      show(formScreen);
+      formMsg.textContent = '';
+      document.getElementById('entry').value = new Date().toISOString().slice(0,16);
+      setActiveButton(btnNew);
+    });
+
+    btnActive.addEventListener('click', () => {
+      show(activeScreen);
+      loadActiveVisitors();
+      setActiveButton(btnActive);
+    });
+
+    btnReports.addEventListener('click', () => {
+      show(reportScreen);
+      loadReports();
+      setActiveButton(btnReports);
+    });
+
+    btnDeleted.addEventListener('click', () => {
+      show(reportScreen);
+      showDeleted = true;
+      reportScope = 'all';
+      setScopeActive(null);
+      monthBar.style.display = 'flex';
+      clearMonthActive();
+      selectedMonth = null;
+      setActiveButton(btnDeleted);
+      loadReports();
+    });
+
+    editForm.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      if (!editingVisitorId) return;
+      editMsg.textContent = 'Güncelleniyor...';
+      const name = (editFirst.value.trim() + ' ' + editLast.value.trim()).trim();
+      const payload = {
+        name,
+        entry: editEntry.value.trim(),
+        meet: editMeet.value.trim(),
+        host: editHost.value.trim()
+      };
+      if (!payload.name || !payload.entry || !payload.meet || !payload.host){
+        editMsg.textContent = 'Lütfen tüm alanları doldurun.';
+        return;
+      }
+      try{
+        const res = await fetch(`/api/visitors/${editingVisitorId}/update`, {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+        const body = await res.json().catch(()=> ({}));
+        if(res.ok){
+          editMsg.textContent = body.message || 'Güncellendi.';
+          closeEditModal();
+          await loadActiveVisitors();
+          await loadReports();
+        } else {
+          editMsg.textContent = body.message || 'Güncellenemedi.';
+        }
+      } catch(err){
+        editMsg.textContent = 'Hata: ' + err.message;
+      }
+    });
+
+    btnCamera.addEventListener('click', () => {
+      startCamera();
+    });
+
+    btnCapture.addEventListener('click', () => {
+      capturePhoto();
+    });
+    cancelEdit.addEventListener('click', closeEditModal);
+
+    btnClearPhoto.addEventListener('click', () => {
+      clearPhoto();
+      stopCamera();
+    });
+
+    scopeButtons.all.addEventListener('click', () => {
+      reportScope = 'all';
+      setScopeActive('all');
+      monthBar.style.display = 'none';
+      clearMonthActive();
+      selectedMonth = null;
+      showDeleted = false;
+      setActiveButton(btnReports);
+      loadReports();
+    });
+
+    scopeButtons.year.addEventListener('click', () => {
+      reportScope = 'year';
+      setScopeActive('year');
+      monthBar.style.display = 'flex';
+      clearMonthActive();
+      selectedMonth = null;
+      showDeleted = false;
+      setActiveButton(btnReports);
+      loadReports();
+    });
+
+    monthButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const m = Number(btn.getAttribute('data-month'));
+        if (!m) return;
+        selectedMonth = m;
+        reportScope = 'month';
+        setScopeActive('year');
+        setMonthActive(m);
+        monthBar.style.display = 'flex';
+        loadReports();
+      });
+    });
+
+    reportSearch.addEventListener('input', () => {
+      const val = reportSearch.value.trim().toLowerCase();
+      reportSearchTerm = val;
+      if (searchTimer) clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        loadReports();
+      }, 250);
+    });
+
+    btnPrintCard.addEventListener('click', () => {
+      if (!lastCardData) return;
+      printCard();
+    });
+
+    document.getElementById('cancelForm').addEventListener('click', () => {
+      show(homeScreen);
+      setActiveButton(null);
+      clearPhoto();
+      stopCamera();
+    });
+
+    visitorForm.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      formMsg.textContent = 'Gönderiliyor...';
+
+      const data = {
+        name: (visitorForm.firstName.value.trim() + ' ' + visitorForm.lastName.value.trim()).trim(),
+        entry: visitorForm.entry.value,  
+        meet: visitorForm.meet.value.trim(),
+        host: visitorForm.host.value.trim(),
+        photo: capturedPhotoDataUrl || ''
+      };
+
+      if(!visitorForm.firstName.value.trim() || !visitorForm.lastName.value.trim() || !data.entry || !data.meet || !data.host){
+        formMsg.textContent = 'Lütfen tüm alanları doldurun.';
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/visitors', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(data)
+        });
+
+        if (res.ok){
+          const body = await res.json().catch(() => ({}));
+          if (body.id) data.id = body.id;
+          formMsg.textContent = 'Kayıt başarıyla alındı.';
+          renderCard({ ...data });
+          visitorForm.reset();
+          // istersen aktif listeyi yenile
+          loadActiveVisitors();
+          show(formScreen);
+          setActiveButton(btnNew);
+          clearPhoto();
+          stopCamera();
+        } else {
+          const txt = await res.text();
+          formMsg.textContent = 'Sunucu hatası: ' + txt;
+        }
+      } catch (err) {
+        formMsg.textContent = 'Sunucuya bağlanılamadı: ' + err.message;
+        serverStatus.textContent = 'çevrimdışı';
+      }
+    });
+
+    async function loadActiveVisitors(){
+      activeList.innerHTML = '';
+      activeMsg.textContent = 'Yükleniyor...';
+      try {
+        const res = await fetch('/api/visitors/active');
+        if (!res.ok) { activeMsg.textContent = 'Veri alınamadı.'; return; }
+        const data = await res.json();
+        if (!Array.isArray(data) || data.length === 0){
+          activeMsg.textContent = 'Şu anda aktif ziyaretçi bulunmuyor.';
+          return;
+        }
+        activeMsg.textContent = '';
+        for (const v of data){
+          const li = document.createElement('li');
+          const info = document.createElement('div');
+          info.innerHTML = `<strong>${escapeHtml(v.name)}</strong><br><span class="small">${escapeHtml(v.entry)}</span><br><div class="small">${escapeHtml(v.meet)}</div><div class="small">Görüşeceği: ${escapeHtml(v.host)}</div>`;
+
+          if (v.photo){
+            const img = document.createElement('img');
+            img.src = v.photo;
+            img.alt = 'Fotoğraf';
+            img.className = 'thumb';
+            info.appendChild(img);
+          }
+
+          const buttonsWrap = document.createElement('div');
+          buttonsWrap.style.display = 'flex';
+          buttonsWrap.style.gap = '6px';
+
+          if (v.editable){
+            const editBtn = document.createElement('button');
+            editBtn.className = 'chip-btn';
+            editBtn.textContent = 'Düzenle';
+            editBtn.addEventListener('click', () => openEditModal(v));
+            buttonsWrap.appendChild(editBtn);
+          }
+
+          const exitBtn = document.createElement('button');
+          exitBtn.className = 'chip-btn';
+          exitBtn.textContent = 'Çıkış';
+          exitBtn.addEventListener('click', () => checkoutVisitor(v.id, v.name));
+          buttonsWrap.appendChild(exitBtn);
+
+          li.appendChild(info);
+          li.appendChild(buttonsWrap);
+          activeList.appendChild(li);
+        }
+      } catch (err){
+        activeMsg.textContent = 'Hata: ' + err.message;
+        serverStatus.textContent = 'çevrimdışı';
+      }
+    }
+
+    async function checkoutVisitor(id, name){
+      if (!id) return;
+      const onay = confirm((name || 'Ziyaretçi') + ' için çıkış yapılsın mı?');
+      if (!onay) return;
+      activeMsg.textContent = 'Çıkış yapılıyor...';
+      try{
+        const res = await fetch(`/api/visitors/${id}/checkout`, { method:'POST' });
+        const body = await res.json().catch(()=> ({}));
+        if(res.ok){
+          activeMsg.textContent = body.message || 'Çıkış tamamlandı.';
+          await loadActiveVisitors();
+        } else {
+          activeMsg.textContent = body.message || 'İşlem tamamlanamadı.';
+        }
+      } catch(err){
+        activeMsg.textContent = 'Hata: ' + err.message;
+        serverStatus.textContent = 'çevrimdışı';
+      }
+    }
+
+    async function loadReports(){
+      reportsArea.innerHTML = 'Yükleniyor...';
+      try {
+        const q = encodeURIComponent(reportSearchTerm || '');
+        const extra = reportScope === 'month' && selectedMonth ? `&year=${selectedYear}&month=${selectedMonth}` : '';
+        const res = await fetch(`/api/reports?scope=${reportScope}&q=${q}${extra}&deleted=${showDeleted ? 1 : 0}`);
+        if (!res.ok) { reportsArea.textContent = 'Rapor alınamadı.'; return; }
+        const j = await res.json();
+        if (!j.visitors || j.visitors.length === 0){
+          reportsArea.textContent = 'Henüz rapor verisi yok.';
+          return;
+        }
+        reportsArea.innerHTML = renderReports(j.visitors, reportScope);
+        bindDeleteButtons();
+        serverStatus.textContent = 'çevrimiçi';
+      } catch (err){
+        reportsArea.textContent = 'Hata: ' + err.message;
+        serverStatus.textContent = 'çevrimdışı';
+      }
+    }
+
+    function escapeHtml(s){
+      if (!s) return '';
+      return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+    }
+
+    function setScopeActive(scope){
+      Object.entries(scopeButtons).forEach(([key, btn]) => {
+        if (key === scope) btn.classList.add('active');
+        else btn.classList.remove('active');
+      });
+    }
+
+    function setMonthActive(month){
+      monthButtons.forEach(btn => {
+        const m = Number(btn.getAttribute('data-month'));
+        if (m === month) btn.classList.add('active');
+        else btn.classList.remove('active');
+      });
+    }
+
+    function clearMonthActive(){
+      monthButtons.forEach(btn => btn.classList.remove('active'));
+    }
+
+    function bindDeleteButtons(){
+      const btns = reportsArea.querySelectorAll('[data-del]');
+      btns.forEach(btn => {
+        btn.onclick = () => {
+          const id = Number(btn.getAttribute('data-del'));
+          const name = btn.getAttribute('data-name') || '';
+          deleteVisitor(id, name);
+        };
+      });
+      const purgeBtns = reportsArea.querySelectorAll('[data-purge]');
+      purgeBtns.forEach(btn => {
+        btn.onclick = () => {
+          const id = Number(btn.getAttribute('data-purge'));
+          const name = btn.getAttribute('data-name') || '';
+          purgeVisitor(id, name);
+        };
+      });
+    }
+
+    const monthNames = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+
+    function renderReports(data, scope){
+      if (!Array.isArray(data) || data.length === 0) return 'Henüz rapor verisi yok.';
+      const renderItem = (v) => {
+        const status = v.active ? '<span class="badge">Aktif</span>' : '<span class="badge off">Pasif</span>';
+        const exitTxt = v.exit ? formatDate(v.exit) : '—';
+        const photoHtml = v.photo ? `<img src="${v.photo}" alt="Fotoğraf" class="thumb">` : '';
+        const deleteBtn = showDeleted
+          ? (v.purge_allowed ? `<button type="button" class="chip-btn danger" data-purge="${v.id}" data-name="${escapeHtml(v.name)}">Kalıcı Sil</button>` : `<span class="small">Kalıcı silme süresi doldu</span>`)
+          : `<button type="button" class="chip-btn danger" data-del="${v.id}" data-name="${escapeHtml(v.name)}">Sil</button>`;
+        const deletedInfo = showDeleted && v.deleted_at ? `<span class="small">Silindi: ${formatDate(v.deleted_at)}</span><br>` : '';
+        return `<div class="report-card">
+                  <div>
+                    <strong>${escapeHtml(v.name)}</strong><br>
+                    <span class="small">Giriş: ${formatDate(v.entry)}</span><br>
+                    <span class="small">Çıkış: ${exitTxt}</span><br>
+                    <span class="small">Görüşeceği: ${escapeHtml(v.host)}</span><br>
+                    <span class="small">Sebep: ${escapeHtml(v.meet)}</span><br>
+                    ${deletedInfo}
+                  </div>
+                  <div style="text-align:right; display:flex; flex-direction:column; gap:8px; align-items:flex-end;">
+                    ${photoHtml}
+                    ${status}
+                    ${deleteBtn}
+                  </div>
+                </div>`;
+      };
+
+      if (scope === 'all'){
+        const sorted = [...data].sort((a,b) => (b.entry || '').localeCompare(a.entry || ''));
+        return sorted.map(renderItem).join('');
+      }
+
+      const grouped = new Map();
+      data.forEach(v => {
+        const d = new Date(v.entry || '');
+        const year = d.getFullYear();
+        const month = d.getMonth();
+        const key = scope === 'year' ? `${year}` : `${year}-${String(month+1).padStart(2,'0')}`;
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key).push(v);
+      });
+
+      const sortedKeys = Array.from(grouped.keys()).sort((a,b) => a > b ? -1 : 1);
+
+      return sortedKeys.map(key => {
+        const list = grouped.get(key);
+        list.sort((a,b) => (b.entry || '').localeCompare(a.entry || ''));
+        let title = '';
+        if (scope === 'year') {
+          title = key;
+        } else {
+          const [y,m] = key.split('-');
+          const idx = Number(m)-1;
+          title = `${monthNames[idx] || m} ${y}`;
+        }
+        const heading = `<h4 style="margin:8px 0 6px 0;">${title}</h4>`;
+        return `${heading}${list.map(renderItem).join('')}`;
+      }).join('');
+    }
+
+    async function deleteVisitor(id, name){
+      if (!id) return;
+      const onay = confirm((name || 'Ziyaretçi') + ' kaydı silinsin mi?');
+      if (!onay) return;
+      reportsArea.textContent = 'Siliniyor...';
+      try{
+        const res = await fetch(`/api/visitors/${id}/delete`, { method:'POST' });
+        const body = await res.json().catch(()=> ({}));
+        if(res.ok){
+          await loadReports();
+        } else {
+          reportsArea.textContent = body.message || 'Silme işlemi tamamlanamadı.';
+        }
+      } catch(err){
+        reportsArea.textContent = 'Hata: ' + err.message;
+      }
+    }
+
+    async function purgeVisitor(id, name){
+      if (!id) return;
+      const onay = confirm((name || 'Ziyaretçi') + ' kaydı kalıcı silinsin mi? Bu işlem geri alınamaz.');
+      if (!onay) return;
+      reportsArea.textContent = 'Kalıcı siliniyor...';
+      try{
+        const res = await fetch(`/api/visitors/${id}/purge`, { method:'POST' });
+        const body = await res.json().catch(()=> ({}));
+        if(res.ok){
+          await loadReports();
+        } else {
+          reportsArea.textContent = body.message || 'Kalıcı silme tamamlanamadı.';
+        }
+      } catch(err){
+        reportsArea.textContent = 'Hata: ' + err.message;
+      }
+    }
+    function openEditModal(v){
+      editingVisitorId = v.id;
+      const fullName = (v.name || '').trim();
+      const parts = fullName.split(/\s+/).filter(Boolean);
+      const last = parts.length > 1 ? parts.pop() : '';
+      const first = parts.join(' ') || fullName;
+      editFirst.value = first;
+      editLast.value = last;
+      editEntry.value = v.entry || '';
+      editMeet.value = v.meet || '';
+      editHost.value = v.host || '';
+      editMsg.textContent = '';
+      editModal.classList.add('open');
+      editModal.setAttribute('aria-hidden','false');
+    }
+    function closeEditModal(){
+      editModal.classList.remove('open');
+      editModal.setAttribute('aria-hidden','true');
+      editingVisitorId = null;
+    }
+    function renderCard(data){
+      lastCardData = data;
+      cardContainer.style.display = 'block';
+      cardPhoto.src = data.photo || '';
+      cardPhoto.style.display = data.photo ? 'block' : 'none';
+      const fullName = (data.name || '').trim();
+      const nameParts = fullName.split(/\s+/).filter(Boolean);
+      const lastName = nameParts.length > 1 ? nameParts.pop() : '';
+      const firstName = nameParts.join(' ') || fullName;
+      const infoHtml = `
+        <strong>Ad: ${escapeHtml(firstName)}<br>Soyad: ${escapeHtml(lastName)}</strong><br>
+        <span class="small">Giriş: ${formatDate(data.entry)}</span><br>
+        <span class="small">Görüşeceği: ${escapeHtml(data.host || '')}</span><br>
+        <span class="small">Sebep: ${escapeHtml(data.meet || '')}</span>
+      `;
+      cardInfo.innerHTML = infoHtml;
+      const qrPayload = `id:${data.id || ''}|ad:${firstName}|soy:${lastName}`;
+      generateQR(qrPayload);
+    }
+
+    function generateQR(text){
+      if (!window.QRCode) {
+        formMsg.textContent = 'QR kütüphanesi yüklenemedi (script).';
+        return;
+      }
+      cardQR.innerHTML = '';
+      lastCardData.qrText = text;
+      try {
+        new QRCode(cardQR, { text, width: 48, height: 48, correctLevel: QRCode.CorrectLevel.L, typeNumber: 6 });
+      } catch (err){
+        formMsg.textContent = 'QR oluşturulamadı: ' + err.message;
+      }
+    }
+
+    function printCard(){
+      if (!lastCardData) return;
+      const win = window.open('', '_blank', 'width=420,height=600');
+      if (!win) return;
+      const cardHtml = document.getElementById('printCard').outerHTML;
+      const styles = `
+        <style>
+          body{ font-family: Inter, Arial, sans-serif; margin:12px; }
+          .print-card{
+            border:1px solid #e5e7eb; border-radius:10px; padding:10px;
+            display:grid; grid-template-columns:120px 1fr; grid-template-rows:auto auto;
+            gap:8px; align-items:start; background:#fff; width:340px;
+          }
+          .photo{
+            width:80px; height:106px; border:1px solid #e5e7eb; border-radius:8px;
+            object-fit:cover; background:#f9fafb; grid-column:1; grid-row:1; justify-self:center;
+          }
+          .info{
+            grid-column:2; grid-row:1 / 3; font-size:1.08rem; line-height:1.45rem; text-align:left;
+          }
+          .qr-box{
+            width:48px; height:48px; border:1px dashed #d1d5db; border-radius:8px;
+            display:flex; align-items:center; justify-content:center; background:#f9fafb;
+            grid-column:1; grid-row:2; justify-self:center;
+          }
+          .small{ color:#4b5563; font-size:0.85rem; }
+        </style>`;
+      win.document.write(`<!doctype html><html><head>${styles}</head><body>${cardHtml}<script>setTimeout(()=>{window.print(); window.close();}, 100);<\/script></body></html>`);
+      win.document.close();
+    }
+
+    show(homeScreen);
+    setActiveButton(null);
+
+    (async function ping(){
+      try {
+        const r = await fetch('/api/ping');
+        serverStatus.textContent = r.ok ? 'çevrimiçi' : 'bilinmiyor';
+      } catch (e){
+        serverStatus.textContent = 'çevrimdışı';
+      }
+    })();
+  </script>
+</body>
+</html>
+
