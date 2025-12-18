@@ -288,7 +288,25 @@
 </head>
 <script src="/static/qrcode.min.js"></script>
 <body>
-  <div class="container" role="main">
+  <div id="loginContainer" class="container" role="main" style="max-width:400px;">
+    <h2 style="margin-bottom:18px; text-align:center;">Kullanıcı Girişi</h2>
+    <form id="loginForm">
+      <div class="row">
+        <label for="loginUser">Kullanıcı Adı</label>
+        <input id="loginUser" type="text" placeholder="kullanıcı adı" required />
+      </div>
+      <div class="row">
+        <label for="loginPass">Şifre</label>
+        <input id="loginPass" type="password" placeholder="Şifre" required />
+      </div>
+      <div class="actions">
+        <button type="submit" class="btn">Giriş</button>
+      </div>
+      <div id="loginMsg" class="note"></div>
+    </form>
+  </div>
+
+  <div class="container" id="appContainer" role="main" style="display:none;">
     <header>
       <div>
         <h1>Ziyaretçi Kayıt Paneli</h1>
@@ -302,6 +320,9 @@
         <button class="btn outline" id="btnActive">Aktif Ziyaretçiler</button>
         <button class="btn outline" id="btnReports">Ziyaretçi Raporları</button>
         <button class="btn outline" id="btnDeleted">Silinen Kayıtlar</button>
+        <button class="btn outline" id="btnAddUser" style="display:none; margin-top:8px;">Kullanıcı Ekle</button>
+        <button class="btn outline" id="btnDeleteUser" style="display:none; margin-top:4px; border-color:#fecaca; color:#b91c1c;">Kullanıcı Sil</button>
+        <button class="btn outline" id="btnLogout" style="margin-top:20px; background:#fee2e2; color:#b91c1c; border:1px solid #fecdd3;">Çıkış Yap</button>
       </aside>
 
       <section class="content-card" id="mainContent">
@@ -406,6 +427,7 @@
       </section>
     </div>
   </div>
+  </div>
 
   <div class="modal" id="editModal">
     <div class="modal-card">
@@ -452,10 +474,178 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script>
+    const loginContainer = document.getElementById('loginContainer');
+    const appContainer = document.getElementById('appContainer');
+    const loginForm = document.getElementById('loginForm');
+    const loginMsg = document.getElementById('loginMsg');
+    const btnAddUser = document.getElementById('btnAddUser');
+    const btnDeleteUser = document.getElementById('btnDeleteUser');
+    let currentIsAdmin = false;
+
+    loginForm.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      loginMsg.textContent = 'Giriş yapılıyor...';
+      const username = document.getElementById('loginUser').value.trim();
+      const password = document.getElementById('loginPass').value;
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const body = await res.json();
+        if (res.ok) {
+          currentIsAdmin = !!body.is_admin;
+          updateAdminUI();
+          loginMsg.textContent = '';
+          showApp();
+        } else {
+          loginMsg.textContent = body.message || 'Giriş başarısız.';
+        }
+      } catch (err) {
+        loginMsg.textContent = 'Sunucuya bağlanılamadı.';
+      }
+    });
+
+    function showApp() {
+      loginContainer.style.display = 'none';
+      appContainer.style.display = '';
+    }
+
+    function showLogin() {
+      appContainer.style.display = 'none';
+      loginContainer.style.display = '';
+      const userInput = document.getElementById('loginUser');
+      const passInput = document.getElementById('loginPass');
+      if (userInput) userInput.value = '';
+      if (passInput) passInput.value = '';
+      loginMsg.textContent = '';
+    }
+
+    (async function checkAuth() {
+      try {
+        const res = await fetch('/api/me');
+        const data = await res.json();
+        if (data.logged_in) {
+          currentIsAdmin = !!data.is_admin;
+          updateAdminUI();
+          showApp();
+        } else {
+          showLogin();
+        }
+      } catch (e) {
+        showLogin();
+      }
+    })();
+
     const btnNew = document.getElementById('btnNew');
     const btnActive = document.getElementById('btnActive');
     const btnReports = document.getElementById('btnReports');
     const btnDeleted = document.getElementById('btnDeleted');
+    const btnLogout = document.getElementById('btnLogout');
+
+    btnLogout.addEventListener('click', async () => {
+      await fetch('/api/logout', { method: 'POST' });
+      currentIsAdmin = false;
+      updateAdminUI();
+      showLogin();
+    });
+
+    function updateAdminUI() {
+      btnAddUser.style.display = currentIsAdmin ? '' : 'none';
+      btnDeleteUser.style.display = currentIsAdmin ? '' : 'none';
+    }
+
+    btnAddUser.addEventListener('click', async () => {
+      const username = prompt('Yeni kullanıcı adı:');
+      if (!username) return;
+      const password = prompt('Şifre (en az 8 karakter):');
+      if (!password) return;
+      if (password.length < 8) {
+        alert('Şifre en az 8 karakter olmalı.');
+        return;
+      }
+      try {
+        const res = await fetch('/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const body = await res.json().catch(() => ({}));
+        if (res.ok) {
+          alert(body.message || 'Kullanıcı oluşturuldu.');
+        } else {
+          alert(body.message || 'Kullanıcı oluşturulamadı.');
+        }
+      } catch (err) {
+        alert('Hata: ' + err.message);
+      }
+    });
+    btnDeleteUser.addEventListener('click', async () => {
+      try {
+        const res = await fetch('/api/users/list');
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          alert(body.message || 'Kullanıcı listesi alınamadı.');
+          return;
+        }
+        const users = Array.isArray(body.users) ? body.users : [];
+        if (!users.length) {
+          openModal('Kullanıcılar', '<p class="small">Kayıtlı kullanıcı bulunamadı.</p>');
+          return;
+        }
+        const rows = users.map(u => {
+          const role = u.is_admin ? 'Admin' : 'Kullanıcı';
+          const created = u.created_at ? escapeHtml(u.created_at) : '';
+          const disabled = u.is_admin ? 'disabled' : '';
+          const note = u.is_admin ? '<span class="small">(admin silinemez)</span>' : '';
+          return `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #eef2ff;">
+              <div>
+                <strong>${escapeHtml(u.email)}</strong><br>
+                <span class="small">${role}</span><br>
+                ${created ? `<span class="small">${created}</span>` : ''}
+              </div>
+              <div>
+                ${note}
+                <button type="button" class="chip-btn" data-user-id="${u.id}" data-username="${escapeHtml(u.email)}" ${disabled}>Sil</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+        openModal('Kullanıcı Sil', rows);
+        const buttons = modalBody.querySelectorAll('[data-user-id]');
+        buttons.forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const id = Number(btn.getAttribute('data-user-id'));
+            const username = btn.getAttribute('data-username') || '';
+            if (!id) return;
+            const adminPassword = prompt(`"${username}" kullanıcısını silmek için admin şifrenizi girin:`);
+            if (!adminPassword) return;
+            const onay = confirm(`"${username}" adlı kullanıcı kalıcı olarak silinsin mi? Bu işlem geri alınamaz.`);
+            if (!onay) return;
+            try {
+              const delRes = await fetch('/api/users/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: id, admin_password: adminPassword })
+              });
+              const delBody = await delRes.json().catch(() => ({}));
+              if (delRes.ok) {
+                alert(delBody.message || 'Kullanıcı silindi.');
+                btnDeleteUser.click();
+              } else {
+                alert(delBody.message || 'Kullanıcı silinemedi.');
+              }
+            } catch (err) {
+              alert('Hata: ' + err.message);
+            }
+          });
+        });
+      } catch (err) {
+        alert('Hata: ' + err.message);
+      }
+    });
     const main = document.getElementById('mainContent');
 
     const homeScreen = document.getElementById('homeScreen');
@@ -500,14 +690,12 @@
 
     const serverStatus = document.getElementById('serverStatus');
 
-    // Modal
     const modal = document.getElementById('modal');
     const modalTitle = document.getElementById('modalTitle');
     const modalBody = document.getElementById('modalBody');
     const modalClose = document.getElementById('modalClose');
     modalClose.addEventListener('click', closeModal);
 
-    // Camera elements
     const btnCamera = document.getElementById('btnCamera');
     const btnCapture = document.getElementById('btnCapture');
     const btnClearPhoto = document.getElementById('btnClearPhoto');
@@ -585,6 +773,14 @@
       btnCamera.disabled = false;
     }
 
+    function setNowToEntry(){
+      const entryInput = document.getElementById('entry');
+      if (!entryInput) return;
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      entryInput.value = now.toISOString().slice(0,16);
+    }
+
     function formatDate(val){
       if (!val) return '';
       const d = new Date(val);
@@ -605,7 +801,7 @@
     btnNew.addEventListener('click', () => {
       show(formScreen);
       formMsg.textContent = '';
-      document.getElementById('entry').value = new Date().toISOString().slice(0,16);
+      setNowToEntry();
       setActiveButton(btnNew);
     });
 
@@ -768,7 +964,6 @@
           formMsg.textContent = 'Kayıt başarıyla alındı.';
           renderCard({ ...data });
           visitorForm.reset();
-          // istersen aktif listeyi yenile
           loadActiveVisitors();
           show(formScreen);
           setActiveButton(btnNew);
@@ -1114,6 +1309,8 @@
         serverStatus.textContent = 'çevrimdışı';
       }
     })();
+
+    setNowToEntry();
   </script>
 </body>
 </html>

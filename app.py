@@ -1,17 +1,15 @@
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, session
 import sqlite3
 from datetime import datetime
 import os
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
+app.secret_key = os.urandom(24)
 DB_PATH = os.path.join(app.root_path, "visitors.db")
 
 
 def format_ts(val: str) -> str:
-    """
-    Format incoming ISO-like timestamp to DD.MM.YYYY HH:MM.
-    If parsing fails, fall back to replacing 'T' with space.
-    """
     if not val:
         return val
     try:
@@ -22,13 +20,14 @@ def format_ts(val: str) -> str:
 
 
 def parse_ts(val: str):
-    """Parse DD.MM.YYYY HH:MM; return datetime or None."""
     if not val:
         return None
     try:
         return datetime.strptime(val, "%d.%m.%Y %H:%M")
     except ValueError:
         return None
+
+
 def init_db():
     os.makedirs(app.root_path, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
@@ -48,6 +47,35 @@ def init_db():
             deleted_at TEXT,
             created_at TEXT
               )""")
+    c.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL UNIQUE,
+            password TEXT NOT NULL,
+            is_admin INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT
+              )""")
+    c.execute("PRAGMA table_info(users)")
+    u_columns = [row[1] for row in c.fetchall()]
+    if "is_admin" not in u_columns:
+        c.execute("ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0")
+
+    default_username = "admin"
+    default_password = "13579456Asd."
+    hashed = generate_password_hash(default_password)
+    created = format_ts(datetime.now().isoformat(timespec="minutes"))
+    c.execute("SELECT id FROM users WHERE email=?", (default_username,))
+    row = c.fetchone()
+    if row:
+        c.execute(
+            "UPDATE users SET password=?, is_admin=1 WHERE email=?",
+            (hashed, default_username),
+        )
+    else:
+        c.execute(
+            "INSERT INTO users (email, password, is_admin, created_at) VALUES (?,?,1,?)",
+            (default_username, hashed, created),
+        )
     c.execute("PRAGMA table_info(visitors)")
     columns = [row[1] for row in c.fetchall()]
     if "host" not in columns:
@@ -198,7 +226,6 @@ def get_reports():
 
 @app.route("/api/visitors/<int:visitor_id>/purge", methods=["POST"])
 def purge_visitor(visitor_id):
-    """Kalıcı silme: yalnızca silindikten sonraki 10 dakika içinde."""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
@@ -227,6 +254,159 @@ def purge_visitor(visitor_id):
 @app.route("/api/ping")
 def ping():
     return "ok", 200
+
+
+@app.route("/api/users", methods=["POST"])
+def create_user():
+    if "user_id" not in session:
+        return jsonify({"message": "Giriş yapmalısınız."}), 401
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    c.execute("SELECT is_admin FROM users WHERE id=?", (session["user_id"],))
+    current = c.fetchone()
+    if not current or current["is_admin"] != 1:
+        conn.close()
+        return jsonify({"message": "Sadece admin yeni kullanıcı ekleyebilir."}), 403
+
+    data = request.json or {}
+    username = (data.get("username") or "").strip()
+    password = (data.get("password") or "").strip()
+    if not username or not password:
+        conn.close()
+        return jsonify({"message": "Kullanıcı adı ve şifre gerekli."}), 400
+    if len(password) < 8:
+        conn.close()
+        return jsonify({"message": "Şifre en az 8 karakter olmalı."}), 400
+
+    try:
+        hashed = generate_password_hash(password)
+        created = format_ts(datetime.now().isoformat(timespec="minutes"))
+        c.execute(
+            "INSERT INTO users (email, password, is_admin, created_at) VALUES (?,?,0,?)",
+            (username, hashed, created),
+        )
+        conn.commit()
+    except sqlite3.IntegrityError:
+        conn.close()
+        return jsonify({"message": "Bu kullanıcı adı zaten kayıtlı."}), 409
+
+    conn.close()
+    return jsonify({"message": "Kullanıcı oluşturuldu."}), 201
+
+
+@app.route("/api/users/list", methods=["GET"])
+def list_users():
+    if "user_id" not in session:
+        return jsonify({"message": "Giriş yapmalısınız."}), 401
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    c.execute("SELECT is_admin FROM users WHERE id=?", (session["user_id"],))
+    current = c.fetchone()
+    if not current or current["is_admin"] != 1:
+        conn.close()
+        return jsonify({"message": "Sadece admin kullanıcıları görebilir."}), 403
+
+    c.execute(
+        "SELECT id, email, is_admin, created_at FROM users WHERE is_admin=0 ORDER BY email ASC"
+    )
+    users = [dict(row) for row in c.fetchall()]
+    conn.close()
+    return jsonify({"users": users}), 200
+
+
+@app.route("/api/users/delete", methods=["POST"])
+def delete_user():
+    if "user_id" not in session:
+        return jsonify({"message": "Giriş yapmalısınız."}), 401
+
+    data = request.json or {}
+    user_id = data.get("user_id")
+    username = (data.get("username") or "").strip()
+    admin_password = (data.get("admin_password") or "").strip()
+    if (not user_id and not username) or not admin_password:
+        return jsonify({"message": "Silinecek kullanıcı ve admin şifresi gerekli."}), 400
+
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+
+    c.execute("SELECT * FROM users WHERE id=?", (session["user_id"],))
+    current = c.fetchone()
+    if not current or current["is_admin"] != 1:
+        conn.close()
+        return jsonify({"message": "Bu işlem için admin yetkisi gerekli."}), 403
+    if not check_password_hash(current["password"], admin_password):
+        conn.close()
+        return jsonify({"message": "Admin şifresi hatalı."}), 401
+
+    if user_id:
+        c.execute("SELECT * FROM users WHERE id=?", (user_id,))
+    else:
+        c.execute("SELECT * FROM users WHERE email=?", (username,))
+    user = c.fetchone()
+    if not user:
+        conn.close()
+        return jsonify({"message": "Kullanıcı bulunamadı."}), 404
+
+    if user["is_admin"] == 1:
+        conn.close()
+        return jsonify({"message": "Admin hesapları silinemez."}), 400
+
+    c.execute("DELETE FROM users WHERE id=?", (user["id"],))
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Kullanıcı kalıcı olarak silindi."}), 200
+
+
+@app.route("/api/login", methods=["POST"])
+def login():
+    data = request.json
+    username = (data.get("username") or "").strip()
+    password = (data.get("password") or "").strip()
+    if not username or not password:
+        return jsonify({"message": "Kullanıcı adı ve şifre gerekli."}), 400
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+    c.execute("SELECT * FROM users WHERE email=?", (username,))
+    user = c.fetchone()
+    conn.close()
+    if not user or not check_password_hash(user["password"], password):
+        return jsonify({"message": "Kullanıcı adı veya şifre hatalı."}), 401
+    is_admin = bool(user["is_admin"]) if "is_admin" in user.keys() else False
+    session["user_id"] = user["id"]
+    session["email"] = user["email"]
+    session["is_admin"] = is_admin
+    return jsonify(
+        {
+            "message": "Giriş başarılı.",
+            "username": user["email"],
+            "is_admin": is_admin,
+        }
+    ), 200
+
+
+@app.route("/api/logout", methods=["POST"])
+def logout():
+    session.clear()
+    return jsonify({"message": "Çıkış yapıldı."}), 200
+
+
+@app.route("/api/me")
+def me():
+    if "user_id" not in session:
+        return jsonify({"logged_in": False}), 200
+    return jsonify(
+        {
+            "logged_in": True,
+            "username": session.get("email"),
+            "is_admin": bool(session.get("is_admin", False)),
+        }
+    ), 200
 
 @app.route("/")
 def index():
